@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sketch</title>
+
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <script src="libraries/p5.min.js"></script>
+    <script src="libraries/p5.sound.min.js"></script>
+    <script src="//js.zapjs.com/js/download.js"></script>
+  </head>
+
+  <body>
+    <h1>Linien Geneator</h1>
+    <div class="controls">
+      <input id="file-input" type="file" accept="image/svg+xml">
+      <label id="ssize-input-label" for="ssize-input" hidden="true">Stichelgrösse [mm]:</label>
+      <input id="ssize-input" type="number" title="ssize-input" value="1" hidden="true">
+      <button id="start-button" hidden="true">Linien Generieren</button>
+      <button id="save-button" hidden="true">Herunterladen</button>
+    </div>
+    <script src="sketch.js"></script>
+  </body>
+</html>
