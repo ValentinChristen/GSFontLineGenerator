@@ -203,7 +203,7 @@ function getCrossPointY(ax, ay, ex, ey, x){
 function generateLines(){
   for(let i = 0; i < letters.length; i++){
     let letter = letters[i];
-    let dx = SSIZE/PTOMM * 0.8;
+    let dx = SSIZE * 0.8;
     let nSegs = ((letter.oBox[1].x - letter.oBox[0].x) / dx) - 1;
     for(let j = 0; j < nSegs; j++){
       let x = letter.oBox[0].x + ((j + 1) * dx);
@@ -225,111 +225,143 @@ function generateLines(){
 
 }
 
-let outString = "";
 
-function makeSvg(){
-  let csvg = new p5.XML();
-  csvg.setName("svg");
-  csvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  csvg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-  csvg.setAttribute("width", gWIDH.toString());
-  csvg.setAttribute("height", gHEIGHT.toString());
-  let viewBox = "0 0 " + (gWIDH * 2).toString() + (gWIDH * 2).toString();
-  csvg.setAttribute("viewBox", viewBox );
-  csvg.setAttribute("fill-rule","evenodd" );
-  let cg = new p5.XML();
-  cg.setName("g");
 
-  let pathDs = [];
-
-  for(let i = 0; i< letters.length; i++){
-    //outline
-    let ol = "M "
+function makeDxf(){
+  let dxf = "  0\nSECTION\n  2\nENTITIES\n";
+  for(let i = 0; i < letters.length; i++){
+    dxf = dxf.concat("  0\nPOLYLINE\n  8\n0\n  66\n1\n  70\n1\n  62\n7\n");
     for(let j = 0; j < letters[i].points.length; j++){
-      let p = letters[i].points[j].x.toString() + " " + letters[i].points[j].y.toString();
-      if(j != letters[i].points.length){
-        p += "L ";
-      } 
-      ol += p;
+      dxf = dxf.concat("  0\nVERTEX\n  8\n0\n  10\n", letters[i].points[j].x.toString(), "\n  20\n", letters[i].points[j].y.toString(), "\n");
     }
-
-    pathDs.push(ol);
-
+    dxf = dxf.concat("  0\nSEQEND\n");
     //children
     for(let j = 0; j < letters[i].children.length; j++){
-      let ol = "M "
+      dxf = dxf.concat("  0\nPOLYLINE\n  8\n0\n  66\n1\n  70\n1\n  62\n7\n");
       for(let k = 0; k < letters[i].children[j].points.length; k++){
-        let p = letters[i].children[j].points[k].x.toString() + " " + letters[i].children[j].points[k].y.toString();
-        if(k != letters[i].children[j].points.length){
-          p += "L ";
-        } 
-        ol += p;
+        dxf = dxf.concat("  0\nVERTEX\n  8\n0\n  10\n", letters[i].children[j].points[k].x.toString(), "\n  20\n", letters[i].children[j].points[k].y.toString(), "\n");
       }
-      pathDs.push(ol);
+      dxf = dxf.concat("  0\nSEQEND\n");
     }
-
     //lines
     for(let j = 0; j < letters[i].lines.length; j++){
-      let line = "M " + letters[i].lines[j].s.x.toString() + " " + letters[i].lines[j].s.y.toString() + "L " + letters[i].lines[j].e.x.toString() + " " + letters[i].lines[j].e.y.toString();
-      pathDs.push(line);
+      dxf = dxf.concat("  0\nLINE\n  8\n0\n  10\n", letters[i].lines[j].s.x.toString(), "\n  20\n", letters[i].lines[j].s.y.toString(), "\n  11\n", letters[i].lines[j].e.x.toString(), "\n  21\n", letters[i].lines[j].e.y.toString(), "\n");
     }
-
   }
+  dxf = dxf.concat("  0\nENDSEC\n  0\nEOF\n");
+  download(dxf, "out.dxf", "text/plain");
 
-  for(let i = 0; i < pathDs.length; i++){
-    let nPath = new p5.XML();
-    nPath.setName("path");
-    nPath.setAttribute("style", "stroke:#000000; stroke-width:0.72; fill:none");
-    nPath.setAttribute("d", pathDs[i]);
-    cg.addChild(nPath);
-  }
-
-  csvg.addChild(cg);
-
-  outString = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" + csvg.serialize();
-
-  download(outString, "out.svg", "text/plain");
 }
-let inFile;
-function loadSvg(){
-  //console.log(inFile.listChildren());
-    let x_paths = inFile.getChildren('path');
-    paths = [];
-    letters = [];
-    for(let i = 0; i < x_paths.length; i++){
-      paths[i] = {};
-      paths[i].src = x_paths[i].getString('d');
-      paths[i].points = getPoints(paths[i].src);
+
+let dxfFile;
+
+
+function parseDfx(data){
+  let lines = data;
+  let currentEntity = null;
+  let entityType = "";
+  let contents = [];
+
+  for(let i = 0; i < lines.length; i++){
+    let currentLine = lines[i].trim();
+    if(
+      currentLine === "VERTEX" ||
+      currentLine === "SEQEND"
+    ){
+      currentEntity = {};
+      entityType = currentLine;
+    }else if(currentEntity !== null){
+      
+      switch(currentLine){
+        case "8":
+          i++;
+          break;
+        case "10":
+          
+          currentEntity.x = parseFloat(lines[++i].trim());
+          break;
+          
+        case "20":
+          currentEntity.y = parseFloat(lines[++i].trim());
+          break;
+
+        case "0":
+          if(
+            entityType === "VERTEX" &&
+            currentEntity.x != undefined &&
+            currentEntity.y != undefined
+          ){
+            contents.push({
+              type: entityType,
+              x: currentEntity.x,
+              y: currentEntity.y
+            });
+          }else if(entityType === "SEQEND"){
+            contents.push({type: entityType});
+          }
+          currentEntity = null;
+          entityType = "";
+          break;
+
+        default:
+          break;
+      }
     }
-    getFullBox();
-    translateZero();
-    getBoxes();
-    checkBoxes();
-    getLetters();
-    paths = [];
-    ssizeInputLabel.removeAttribute("hidden");
-    ssizeInput.removeAttribute("hidden");
-    startButton.removeAttribute("hidden");
+  }
+  paths = [];
+  letters = [];
+  let p = []
+  for(let i = 0; i < contents.length; i++){
+    
+    if(contents[i].type === "VERTEX"){
+      p.push({x: contents[i].x, y: contents[i].y});
+    }else if ( contents[i].type === "SEQEND"){
+      paths.push({points: p});
+      p = [];
+    }
+  }
+  
+  getFullBox();
+  
+  translateZero();
+  getBoxes();
+  checkBoxes();
+  getLetters();
+  console.log(paths);
+  paths = [];
+  contents = [];
+  ssizeInputLabel.removeAttribute("hidden");
+  ssizeInput.removeAttribute("hidden");
+  startButton.removeAttribute("hidden");
+  console.log(letters);
+  
 }
+
 
 function handleInputFile(){
   const fileList = this.files;
   const file = fileList[0];
   var reader = new FileReader();
+  let ending = [];
+  for(let i = 0; i < 4; i++){
+    ending[i] = file.name.at(file.name.length - (3 - i));
+  }
+  let type = ending[0].concat(ending[1], ending[2]);
+ 
   
   let gotFile = false;
   reader.onload = function(e){
-    if(file.type == 'image/svg+xml'){
+    if(type == 'dxf'){
       //console.log(file);
       const link = document.createElement("a");
       const f = new Blob([e.target.result], {type : 'test/plain'});
       link.href = URL.createObjectURL(f);
-      
-      inFile = loadXML(link.href, loadSvg);
+      dxfFile = loadStrings(link.href, parseDfx);
+      //inFile = loadXML(link.href, loadSvg);
       //console.log(inFile);
       
     } else {
-      alert("Keine svg Datei");
+      alert("Keine dxf Datei");
     }
   }
 
@@ -347,7 +379,7 @@ function ssizeInputCb(){
 }
 
 function saveButtonCb(){
-  makeSvg();
+  makeDxf();
 }
 
 let fileInput;
@@ -377,14 +409,19 @@ function setup() {
   saveButton = document.getElementById("save-button");
   saveButton.addEventListener("click", saveButtonCb, false);
 
+  
+  
+
 
 }
 
 function drawOl(points){
+  
+  strokeWeight(1);
   for(let j = 0; j < points.length - 1; j++){
       let b = points[j];
       let e = points[j + 1];
-      line(b.x*kx, b.y*ky, e.x*kx, e.y*ky);
+      line(b.x*kx, abs(b.y*ky - HEIGHT), e.x*kx, abs(e.y*ky - HEIGHT));
     }
 }
 
@@ -425,7 +462,7 @@ function drawLetters(){
     stroke("green");
     for(let j = 0; j < letter.lines.length; j++){
       let l = letter.lines[j];
-      line(l.s.x * kx, l.s.y * ky, l.e.x * kx, l.e.y * ky);
+      line(l.s.x * kx, abs(l.s.y * ky - HEIGHT), l.e.x * kx, abs(l.e.y * ky - HEIGHT));
     }
   }
 }
