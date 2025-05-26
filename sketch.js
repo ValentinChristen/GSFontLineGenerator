@@ -203,7 +203,7 @@ function getCrossPointY(ax, ay, ex, ey, x){
 function generateLines(){
   for(let i = 0; i < letters.length; i++){
     let letter = letters[i];
-    let dx = SSIZE * 0.8;
+    let dx = SSIZE * 0.7;
     let nSegs = ((letter.oBox[1].x - letter.oBox[0].x) / dx) - 1;
     for(let j = 0; j < nSegs; j++){
       let x = letter.oBox[0].x + ((j + 1) * dx);
