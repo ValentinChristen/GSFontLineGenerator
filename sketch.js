@@ -214,8 +214,8 @@ function generateLines(){
         nLine.s.x = x
         nLine.e.x = x
 
-        nLine.s.y = getCrossPointY(parts[k].s.x, parts[k].s.y, parts[k].e.x, parts[k].e.y, x);
-        nLine.e.y = getCrossPointY(parts[k+1].s.x, parts[k+1].s.y, parts[k+1].e.x, parts[k+1].e.y, x);
+        nLine.s.y = getCrossPointY(parts[k].s.x, parts[k].s.y, parts[k].e.x, parts[k].e.y, x) + dx/2;
+        nLine.e.y = getCrossPointY(parts[k+1].s.x, parts[k+1].s.y, parts[k+1].e.x, parts[k+1].e.y, x) - dx/2;
         letters[i].lines.push(nLine);
       }
     }
@@ -322,18 +322,15 @@ function parseDfx(data){
   }
   
   getFullBox();
-  
   translateZero();
   getBoxes();
   checkBoxes();
   getLetters();
-  console.log(paths);
   paths = [];
   contents = [];
   ssizeInputLabel.removeAttribute("hidden");
   ssizeInput.removeAttribute("hidden");
   startButton.removeAttribute("hidden");
-  console.log(letters);
   
 }
 
@@ -352,13 +349,10 @@ function handleInputFile(){
   let gotFile = false;
   reader.onload = function(e){
     if(type == 'dxf'){
-      //console.log(file);
       const link = document.createElement("a");
       const f = new Blob([e.target.result], {type : 'test/plain'});
       link.href = URL.createObjectURL(f);
       dxfFile = loadStrings(link.href, parseDfx);
-      //inFile = loadXML(link.href, loadSvg);
-      //console.log(inFile);
       
     } else {
       alert("Keine dxf Datei");
@@ -425,38 +419,25 @@ function drawOl(points){
     }
 }
 
-function drawBox(oBox){
-  //strokeWeight(1)
-  let x = oBox[0].x;
-  let y = oBox[0].y;
-  let w = oBox[2].x - x;
-  let h = oBox[2].y - y;
-  rect(x*kx, y*ky, w*kx, h*ky);
-  //strokeWeight(SSIZE/PTOMM * kx);
-}
+
 
 
 function drawLetters(){
   
   strokeWeight(1);
-  //strokeWeight(SSIZE/PTOMM * kx);
   noFill();
   for(let i = 0; i < letters.length; i++){
     let letter = letters[i];
     //draw Outline
     stroke("black");
     drawOl(letter.points);
-    //draw Box
-    stroke("magenta");
-    //drawBox(letter.oBox);
+    
     //draw Children
     for(let j = 0; j < letter.children.length; j++){
       //draw ol
       stroke("black");
       drawOl(letter.children[j].points);
-      //draw box
-      stroke("yellow");
-      //drawBox(letter.children[j].oBox);
+      
     }
     //draw lines
     stroke("green");
